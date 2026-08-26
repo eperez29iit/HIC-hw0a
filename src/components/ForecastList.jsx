@@ -1,6 +1,10 @@
+// ForecastList.jsx
+// Displays the seven-day forecast and recommendation emojis.
+
 import {
   qualifiesForBaseball,
   qualifiesForSoccer,
+  qualifiesForUmbrella,
   qualifiesForCustomRule,
 } from "../utils/weatherUtils";
 
@@ -23,6 +27,9 @@ function ForecastList({
           const soccer =
             qualifiesForSoccer(day, soccerThreshold);
 
+          const umbrella =
+            qualifiesForUmbrella(day);
+
           const matchingCustomRules = customRules.filter((rule) =>
             qualifiesForCustomRule(day, rule)
           );
@@ -30,6 +37,7 @@ function ForecastList({
           const hasRecommendations =
             baseball ||
             soccer ||
+            umbrella ||
             matchingCustomRules.length > 0;
 
           return (
@@ -53,9 +61,17 @@ function ForecastList({
                   hasRecommendations ? "" : "empty"
                 }`}
               >
-                {baseball && <span title="Cubs game">⚾</span>}
+                {baseball && (
+                  <span title="Cubs home game">⚾</span>
+                )}
 
-                {soccer && <span title="Soccer">⚽</span>}
+                {soccer && (
+                  <span title="Good day for soccer">⚽</span>
+                )}
+
+                {umbrella && (
+                  <span title="Bring an umbrella">☔</span>
+                )}
 
                 {matchingCustomRules.map((rule) => (
                   <span

@@ -1,9 +1,13 @@
 // weatherService.js
 // Fetches seven days of weather data from Open-Meteo.
 //
-// Open-Meteo does not require an API key for non-commercial use.
-// The app uses daily maximum temperature because the activity rules
-// are based on whether a day's temperature passes a threshold.
+// The app uses:
+// - daily maximum temperature
+// - daily weather code
+// - daily maximum precipitation probability
+// - daily rain amount
+//
+// No API key is required for the free/non-commercial Open-Meteo API.
 
 const CITY_LOCATIONS = {
   Chicago: {
@@ -36,21 +40,6 @@ const HISTORICAL_API =
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// fetchSevenDayWeather
-// city: one of the cities in CITY_LOCATIONS
-// selectedDate: tester/current date selected by the user
-//
-// Returns:
-// [
-//   {
-//     date,
-//     dateKey,
-//     dayName,
-//     temperature,
-//     weather,
-//     weatherCode
-//   }
-// ]
 export async function fetchSevenDayWeather(
   city,
   selectedDate
@@ -71,9 +60,7 @@ export async function fetchSevenDayWeather(
 
   let data;
 
-  // Open-Meteo's live forecast can include up to 92 previous days.
-  // Use it for recent dates so the tester can move backward without
-  // requiring a second data format.
+  // The live forecast endpoint can include up to 92 previous days.
   if (dayDifference >= -92 && dayDifference <= 9) {
     data = await fetchForecastWeather(
       location,
@@ -82,15 +69,14 @@ export async function fetchSevenDayWeather(
       dayDifference
     );
   } else if (dayDifference < -92) {
-    // Older tester dates use Open-Meteo's historical archive API.
+    // Historical archive data does not include forecast probability,
+    // but it does include actual daily rain totals.
     data = await fetchHistoricalWeather(
       location,
       startDate,
       endDate
     );
   } else {
-    // A full seven-day preview can only begin about nine days ahead
-    // because the forecast API provides up to sixteen forecast days.
     throw new Error(
       "A full 7-day forecast is not available that far in the future. Choose a date within the next 9 days or a past date."
     );
@@ -108,13 +94,13 @@ async function fetchForecastWeather(
   const params = new URLSearchParams({
     latitude: String(location.latitude),
     longitude: String(location.longitude),
-    daily: "temperature_2m_max,weather_code",
+    daily:
+      "temperature_2m_max,weather_code,precipitation_probability_max,rain_sum",
     temperature_unit: "fahrenheit",
     timezone: "auto",
     forecast_days: "16",
   });
 
-  // Only request past days when the selected date actually needs them.
   if (dayDifference < 0) {
     params.set(
       "past_days",
@@ -134,8 +120,6 @@ async function fetchForecastWeather(
 
   const data = await response.json();
 
-  // The live API returns a larger range. Keep only the requested
-  // seven-day tester window.
   return sliceDailyRange(
     data,
     formatDateKey(startDate),
@@ -153,7 +137,8 @@ async function fetchHistoricalWeather(
     longitude: String(location.longitude),
     start_date: formatDateKey(startDate),
     end_date: formatDateKey(endDate),
-    daily: "temperature_2m_max,weather_code",
+    daily:
+      "temperature_2m_max,weather_code,rain_sum",
     temperature_unit: "fahrenheit",
     timezone: "auto",
   });
@@ -199,6 +184,13 @@ function sliceDailyRange(data, startKey, endKey) {
       weather_code: indexes.map(
         (index) => data.daily.weather_code[index]
       ),
+      precipitation_probability_max: indexes.map(
+        (index) =>
+          data.daily.precipitation_probability_max?.[index] ?? 0
+      ),
+      rain_sum: indexes.map(
+        (index) => data.daily.rain_sum?.[index] ?? 0
+      ),
     },
   };
 }
@@ -230,12 +222,14 @@ function normalizeDailyWeather(data) {
       temperature: Math.round(temperature),
       weather: weatherCodeToLabel(weatherCode),
       weatherCode,
+      precipitationProbability:
+        daily.precipitation_probability_max?.[index] ?? 0,
+      rainSum:
+        daily.rain_sum?.[index] ?? 0,
     };
   });
 }
 
-// Converts Open-Meteo WMO weather codes into the simpler labels
-// used by the recommendation rule UI.
 export function weatherCodeToLabel(code) {
   if (code === 0 || code === 1) {
     return "Sunny";

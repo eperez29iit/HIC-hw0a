@@ -91,6 +91,31 @@ export function qualifiesForSoccer(day, threshold) {
   );
 }
 
+// Shows the umbrella recommendation if the forecast is explicitly
+// rainy/stormy, if measurable rain is expected, or if Open-Meteo
+// reports any non-zero precipitation probability.
+//
+// Snow-only days are excluded from the probability-only check so a
+// snow forecast does not incorrectly become a "chance of rain" alert.
+export function qualifiesForUmbrella(day) {
+  const rainyWeather =
+    day.weather === "Rainy" ||
+    day.weather === "Stormy";
+
+  const measurableRain =
+    Number(day.rainSum ?? 0) > 0;
+
+  const chanceOfRain =
+    day.weather !== "Snowy" &&
+    Number(day.precipitationProbability ?? 0) > 0;
+
+  return (
+    rainyWeather ||
+    measurableRain ||
+    chanceOfRain
+  );
+}
+
 export function qualifiesForCustomRule(day, rule) {
   const temperatureMatches =
     rule.minimumTemperature === "" ||

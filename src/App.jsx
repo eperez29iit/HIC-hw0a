@@ -13,6 +13,7 @@ import {
   getSeason,
   qualifiesForBaseball,
   qualifiesForSoccer,
+  qualifiesForUmbrella,
   qualifiesForCustomRule,
 } from "./utils/weatherUtils";
 
@@ -56,8 +57,6 @@ function App() {
         );
 
         // Add Cubs home-game information to each weather day.
-        // The CSV parser returns null when there is no "Opponent at Cubs"
-        // entry for that date.
         const combinedDays = weatherDays.map((day) => {
           const cubsGame = getCubsHomeGame(day.dateKey);
 
@@ -123,6 +122,12 @@ function App() {
     ) {
       items.push(
         "⚽ Today is a great day to play Soccer!"
+      );
+    }
+
+    if (qualifiesForUmbrella(currentWeather)) {
+      items.push(
+        "☔ You should bring an umbrella if going out soon!"
       );
     }
 

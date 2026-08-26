@@ -1,3 +1,7 @@
+// TesterSettings.jsx
+// Development/testing controls for dates, thresholds,
+// built-in recommendation rules, and custom rules.
+
 import { useState } from "react";
 
 import {
@@ -134,6 +138,15 @@ function TesterSettings({
               <span>⚽ Soccer</span>
               <span>
                 Over {soccerThreshold}° + Sunny
+              </span>
+            </div>
+          </div>
+
+          <div className="settings-rule">
+            <div className="settings-rule-text">
+              <span>☔ Umbrella</span>
+              <span>
+                Rainy or any chance of rain
               </span>
             </div>
           </div>
