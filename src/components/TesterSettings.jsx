@@ -1,7 +1,4 @@
 // TesterSettings.jsx
-// Development/testing controls for dates, thresholds,
-// built-in recommendation rules, and custom rules.
-
 import { useState } from "react";
 
 import {
@@ -20,40 +17,92 @@ function TesterSettings({
   setSoccerThreshold,
   customRules,
   addCustomRule,
+  updateCustomRule,
   deleteCustomRule,
 }) {
   const [showRuleModal, setShowRuleModal] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState(null);
 
   const [ruleText, setRuleText] = useState("");
   const [ruleEmoji, setRuleEmoji] = useState("⭐");
   const [minimumTemperature, setMinimumTemperature] = useState("");
-  const [dayOfWeek, setDayOfWeek] = useState("Any");
+  const [daysOfWeek, setDaysOfWeek] = useState([]);
   const [weather, setWeather] = useState("Any");
 
+  const weekdayOptions = DAYS_OF_WEEK.filter(
+    (day) => day !== "Any"
+  );
+
   function resetForm() {
+    setEditingRuleId(null);
     setRuleText("");
     setRuleEmoji("⭐");
     setMinimumTemperature("");
-    setDayOfWeek("Any");
+    setDaysOfWeek([]);
     setWeather("Any");
   }
 
-  function handleAddRule() {
+  function openAddRuleModal() {
+    resetForm();
+    setShowRuleModal(true);
+  }
+
+  function openEditRuleModal(rule) {
+    setEditingRuleId(rule.id);
+    setRuleText(rule.text);
+    setRuleEmoji(rule.emoji || "⭐");
+    setMinimumTemperature(rule.minimumTemperature ?? "");
+
+    if (Array.isArray(rule.daysOfWeek)) {
+      setDaysOfWeek(rule.daysOfWeek);
+    } else if (rule.dayOfWeek && rule.dayOfWeek !== "Any") {
+      setDaysOfWeek([rule.dayOfWeek]);
+    } else {
+      setDaysOfWeek([]);
+    }
+
+    setWeather(rule.weather ?? "Any");
+    setShowRuleModal(true);
+  }
+
+  function closeRuleModal() {
+    setShowRuleModal(false);
+    resetForm();
+  }
+
+  function toggleDay(day) {
+    setDaysOfWeek((selectedDays) => {
+      if (selectedDays.includes(day)) {
+        return selectedDays.filter(
+          (selectedDay) => selectedDay !== day
+        );
+      }
+
+      return [...selectedDays, day];
+    });
+  }
+
+  function handleSaveRule() {
     if (!ruleText.trim()) {
       return;
     }
 
-    addCustomRule({
-      id: crypto.randomUUID(),
+    const rule = {
+      id: editingRuleId ?? crypto.randomUUID(),
       text: ruleText.trim(),
       emoji: ruleEmoji || "⭐",
       minimumTemperature,
-      dayOfWeek,
+      daysOfWeek,
       weather,
-    });
+    };
 
-    resetForm();
-    setShowRuleModal(false);
+    if (editingRuleId) {
+      updateCustomRule(rule);
+    } else {
+      addCustomRule(rule);
+    }
+
+    closeRuleModal();
   }
 
   function handleDateChange(event) {
@@ -64,6 +113,44 @@ function TesterSettings({
     }
   }
 
+  function formatRuleDays(rule) {
+    let selectedDays = [];
+
+    if (Array.isArray(rule.daysOfWeek)) {
+      selectedDays = rule.daysOfWeek;
+    } else if (rule.dayOfWeek && rule.dayOfWeek !== "Any") {
+      selectedDays = [rule.dayOfWeek];
+    }
+
+    if (selectedDays.length === 0) {
+      return "Any day";
+    }
+
+    if (selectedDays.length === 7) {
+      return "Every day";
+    }
+
+    return selectedDays
+      .map((day) => day.slice(0, 3))
+      .join(", ");
+  }
+
+  function formatRuleRequirements(rule) {
+    const requirements = [];
+
+    if (rule.minimumTemperature) {
+      requirements.push(`>${rule.minimumTemperature}°`);
+    }
+
+    requirements.push(formatRuleDays(rule));
+
+    if (rule.weather && rule.weather !== "Any") {
+      requirements.push(rule.weather);
+    }
+
+    return requirements.join(" • ");
+  }
+
   return (
     <>
       <section className="tester-settings">
@@ -72,7 +159,7 @@ function TesterSettings({
 
           <button
             className="add-rule-button"
-            onClick={() => setShowRuleModal(true)}
+            onClick={openAddRuleModal}
             aria-label="Add recommendation rule"
           >
             +
@@ -157,38 +244,36 @@ function TesterSettings({
             <h3>Custom Rules</h3>
 
             {customRules.map((rule) => (
-              <div
-                className="settings-rule"
-                key={rule.id}
-              >
+              <div className="settings-rule" key={rule.id}>
                 <div className="settings-rule-text">
                   <span>
                     {rule.emoji} {rule.text}
                   </span>
 
                   <span>
-                    {rule.minimumTemperature
-                      ? `>${rule.minimumTemperature}° `
-                      : ""}
-
-                    {rule.dayOfWeek !== "Any"
-                      ? `${rule.dayOfWeek} `
-                      : ""}
-
-                    {rule.weather !== "Any"
-                      ? rule.weather
-                      : ""}
+                    {formatRuleRequirements(rule)}
                   </span>
                 </div>
 
-                <button
-                  className="delete-rule-button"
-                  onClick={() => deleteCustomRule(rule.id)}
-                  aria-label={`Delete ${rule.text}`}
-                  title="Delete custom rule"
-                >
-                  ×
-                </button>
+                <div className="rule-action-buttons">
+                  <button
+                    className="edit-rule-button"
+                    onClick={() => openEditRuleModal(rule)}
+                    aria-label={`Edit ${rule.text}`}
+                    title="Edit custom rule"
+                  >
+                    ✎
+                  </button>
+
+                  <button
+                    className="delete-rule-button"
+                    onClick={() => deleteCustomRule(rule.id)}
+                    aria-label={`Delete ${rule.text}`}
+                    title="Delete custom rule"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -199,11 +284,15 @@ function TesterSettings({
         <div className="modal-backdrop">
           <div className="rule-modal">
             <div className="modal-header">
-              <h2>Add Recommendation</h2>
+              <h2>
+                {editingRuleId
+                  ? "Edit Recommendation"
+                  : "Add Recommendation"}
+              </h2>
 
               <button
                 className="close-button"
-                onClick={() => setShowRuleModal(false)}
+                onClick={closeRuleModal}
                 aria-label="Close"
               >
                 ×
@@ -249,22 +338,30 @@ function TesterSettings({
               />
             </label>
 
-            <label>
-              Day of Week
+            <fieldset className="day-checkbox-fieldset">
+              <legend>Days of Week</legend>
 
-              <select
-                value={dayOfWeek}
-                onChange={(event) =>
-                  setDayOfWeek(event.target.value)
-                }
-              >
-                {DAYS_OF_WEEK.map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
+              <p className="day-checkbox-help">
+                Leave all unchecked to allow any day.
+              </p>
+
+              <div className="day-checkbox-list">
+                {weekdayOptions.map((day) => (
+                  <label
+                    className="day-checkbox-option"
+                    key={day}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={daysOfWeek.includes(day)}
+                      onChange={() => toggleDay(day)}
+                    />
+
+                    <span>{day}</span>
+                  </label>
                 ))}
-              </select>
-            </label>
+              </div>
+            </fieldset>
 
             <label>
               Weather
@@ -289,16 +386,18 @@ function TesterSettings({
             <div className="modal-actions">
               <button
                 className="secondary-button"
-                onClick={() => setShowRuleModal(false)}
+                onClick={closeRuleModal}
               >
                 Cancel
               </button>
 
               <button
                 className="primary-button"
-                onClick={handleAddRule}
+                onClick={handleSaveRule}
               >
-                Confirm
+                {editingRuleId
+                  ? "Save Changes"
+                  : "Confirm"}
               </button>
             </div>
           </div>

@@ -1,6 +1,4 @@
 // weatherUtils.js
-// Shared display and activity recommendation rules.
-
 export const CITY_OPTIONS = [
   "Chicago",
   "New York",
@@ -50,10 +48,7 @@ export function getSeason(date) {
 
 export function formatDateForInput(date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  );
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
@@ -64,18 +59,12 @@ export function parseDateInput(value) {
     return null;
   }
 
-  const [year, month, day] = value
-    .split("-")
-    .map(Number);
+  const [year, month, day] = value.split("-").map(Number);
 
   return new Date(year, month - 1, day);
 }
 
-export function qualifiesForBaseball(
-  day,
-  city,
-  threshold
-) {
+export function qualifiesForBaseball(day, city, threshold) {
   return (
     city === "Chicago" &&
     day.temperature > threshold &&
@@ -91,12 +80,6 @@ export function qualifiesForSoccer(day, threshold) {
   );
 }
 
-// Shows the umbrella recommendation if the forecast is explicitly
-// rainy/stormy, if measurable rain is expected, or if Open-Meteo
-// reports any non-zero precipitation probability.
-//
-// Snow-only days are excluded from the probability-only check so a
-// snow forecast does not incorrectly become a "chance of rain" alert.
 export function qualifiesForUmbrella(day) {
   const rainyWeather =
     day.weather === "Rainy" ||
@@ -109,11 +92,7 @@ export function qualifiesForUmbrella(day) {
     day.weather !== "Snowy" &&
     Number(day.precipitationProbability ?? 0) > 0;
 
-  return (
-    rainyWeather ||
-    measurableRain ||
-    chanceOfRain
-  );
+  return rainyWeather || measurableRain || chanceOfRain;
 }
 
 export function qualifiesForCustomRule(day, rule) {
@@ -121,9 +100,18 @@ export function qualifiesForCustomRule(day, rule) {
     rule.minimumTemperature === "" ||
     day.temperature > Number(rule.minimumTemperature);
 
-  const dayMatches =
-    rule.dayOfWeek === "Any" ||
-    day.dayName === rule.dayOfWeek;
+  let dayMatches = true;
+
+  if (Array.isArray(rule.daysOfWeek)) {
+    dayMatches =
+      rule.daysOfWeek.length === 0 ||
+      rule.daysOfWeek.includes(day.dayName);
+  } else if (
+    rule.dayOfWeek &&
+    rule.dayOfWeek !== "Any"
+  ) {
+    dayMatches = day.dayName === rule.dayOfWeek;
+  }
 
   const weatherMatches =
     rule.weather === "Any" ||

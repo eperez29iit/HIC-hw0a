@@ -1,8 +1,4 @@
 // App.jsx
-// Main weather dashboard screen.
-// Loads real weather data from Open-Meteo and combines it with
-// the Cubs schedule CSV stored in src/public.
-
 import { useEffect, useMemo, useState } from "react";
 
 import ForecastList from "./components/ForecastList";
@@ -42,7 +38,6 @@ function App() {
     year: "numeric",
   });
 
-  // Reload weather whenever the selected city or tester date changes.
   useEffect(() => {
     let cancelled = false;
 
@@ -51,12 +46,8 @@ function App() {
       setWeatherError("");
 
       try {
-        const weatherDays = await fetchSevenDayWeather(
-          city,
-          selectedDate
-        );
+        const weatherDays = await fetchSevenDayWeather(city, selectedDate);
 
-        // Add Cubs home-game information to each weather day.
         const combinedDays = weatherDays.map((day) => {
           const cubsGame = getCubsHomeGame(day.dateKey);
 
@@ -114,21 +105,12 @@ function App() {
       );
     }
 
-    if (
-      qualifiesForSoccer(
-        currentWeather,
-        soccerThreshold
-      )
-    ) {
-      items.push(
-        "⚽ Today is a great day to play Soccer!"
-      );
+    if (qualifiesForSoccer(currentWeather, soccerThreshold)) {
+      items.push("⚽ Today is a great day to play Soccer!");
     }
 
     if (qualifiesForUmbrella(currentWeather)) {
-      items.push(
-        "☔ You should bring an umbrella if going out soon!"
-      );
+      items.push("☔ You should bring an umbrella if going out soon!");
     }
 
     customRules.forEach((rule) => {
@@ -147,10 +129,15 @@ function App() {
   ]);
 
   function addCustomRule(rule) {
-    setCustomRules((existingRules) => [
-      ...existingRules,
-      rule,
-    ]);
+    setCustomRules((existingRules) => [...existingRules, rule]);
+  }
+
+  function updateCustomRule(updatedRule) {
+    setCustomRules((existingRules) =>
+      existingRules.map((rule) =>
+        rule.id === updatedRule.id ? updatedRule : rule
+      )
+    );
   }
 
   function deleteCustomRule(ruleId) {
@@ -163,9 +150,7 @@ function App() {
     <main className={`weather-app ${season}`}>
       <div className="weather-container">
         <header className="weather-header">
-          <div className="current-date">
-            {formattedDate}
-          </div>
+          <div className="current-date">{formattedDate}</div>
 
           <select
             className="city-selector"
@@ -173,10 +158,7 @@ function App() {
             onChange={(event) => setCity(event.target.value)}
           >
             {CITY_OPTIONS.map((cityOption) => (
-              <option
-                value={cityOption}
-                key={cityOption}
-              >
+              <option value={cityOption} key={cityOption}>
                 {cityOption}
               </option>
             ))}
@@ -199,9 +181,7 @@ function App() {
 
         <section className="recommendations">
           {weatherError ? (
-            <p className="weather-error">
-              {weatherError}
-            </p>
+            <p className="weather-error">{weatherError}</p>
           ) : weatherLoading ? (
             <p className="no-recommendations">
               Checking today's recommendations...
@@ -241,6 +221,7 @@ function App() {
           setSoccerThreshold={setSoccerThreshold}
           customRules={customRules}
           addCustomRule={addCustomRule}
+          updateCustomRule={updateCustomRule}
           deleteCustomRule={deleteCustomRule}
         />
 
